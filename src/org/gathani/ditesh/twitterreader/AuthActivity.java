@@ -15,6 +15,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 
+import twitter4j.Twitter;
+import twitter4j.TwitterFactory;
+
 public class AuthActivity extends Activity {
 
 	private Handler handler = new Handler();
