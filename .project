@@ -30,16 +30,4 @@
 		<nature>com.android.ide.eclipse.adt.AndroidNature</nature>
 		<nature>org.eclipse.jdt.core.javanature</nature>
 	</natures>
-	<linkedResources>
-		<link>
-			<name>res/drawable-hdpi/stub.png</name>
-			<type>1</type>
-			<location>/tmp/stub.png</location>
-		</link>
-		<link>
-			<name>res/drawable-ldpi/stub.png</name>
-			<type>1</type>
-			<location>/tmp/stub.png</location>
-		</link>
-	</linkedResources>
 </projectDescription>
