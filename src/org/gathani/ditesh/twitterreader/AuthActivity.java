@@ -1,27 +1,20 @@
 package org.gathani.ditesh.twitterreader;
 
-import java.io.IOException;
-
-import android.accounts.Account;
-import android.accounts.AccountManager;
-import android.accounts.AccountManagerCallback;
-import android.accounts.AccountManagerFuture;
-import android.accounts.AuthenticatorException;
-import android.accounts.OperationCanceledException;
+import twitter4j.TwitterException;
+import twitter4j.auth.AccessToken;
 import android.app.Activity;
-import android.app.ProgressDialog;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
-import android.util.Log;
-
-import twitter4j.Twitter;
-import twitter4j.TwitterFactory;
+import android.view.View;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 
 public class AuthActivity extends Activity {
 
-	private Handler handler = new Handler();
-	private ProgressDialog progressDialog;
+	private Singleton appState;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -29,63 +22,99 @@ public class AuthActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.auth);
 
-		new Thread(new Runnable() {
+		appState = ((Singleton) getApplication());
 
-			public void run() {
+		WebView webView = (WebView) findViewById(R.id.twitter_login);
+		webView.setVisibility(View.VISIBLE);
 
-				Account account;
-				AccountManager am = AccountManager.get(AuthActivity.this);
-				Account[] accounts = am.getAccountsByType("com.twitter.android.auth.login");
-				
-		        if (accounts.length > 0) account = accounts[0];
-		        else account = null;
+		WebSettings webSettings = webView.getSettings();
+		webSettings.setJavaScriptEnabled(true);
+		webView.setWebViewClient(new WebViewClient() {
 
-				am.getAuthToken(account,
-						"com.twitter.android.oauth.token",
-						null,
-						AuthActivity.this,
-						new OnTokenAcquired(),
-						handler);
+			// This seems to get fired twice, so we control that through
+			// seen bool
+			public boolean shouldOverrideUrlLoading(WebView view, String url) {
 
-				progressDialog.dismiss();
-				Intent i = new Intent(AuthActivity.this, TwitterReaderActivity.class);
-				startActivity(i);
+				if (url != null && url.startsWith(Constants.CALLBACK_URL)) {
 
+					// String oauthToken = "";
+					String oauthVerifier = "";
+
+					String[] urlParameters = url.split("\\?")[1].split("&");
+
+					if (urlParameters[0].startsWith("oauth_verifier")) {
+						oauthVerifier = urlParameters[0].split("=")[1];
+					} else if (urlParameters.length > 1
+							&& urlParameters[1].startsWith("oauth_verifier")) {
+						oauthVerifier = urlParameters[1].split("=")[1];
+					}
+
+					appState.oauthVerifier = oauthVerifier;
+					new TwitterConnect().execute();
+					return true;
+
+				} else
+					return false;
 			}
+		});
 
-		}).start();
-	}
-	
-	private class OnError {
+		webView.loadUrl(appState.requestToken.getAuthorizationURL());
 
 	}
-	
-	private class OnTokenAcquired implements AccountManagerCallback<Bundle> {
-	    @Override
-	    public void run(AccountManagerFuture<Bundle> result) {
-	        // Get the result of the operation from the AccountManagerFuture.
-	        Bundle bundle;
+
+	private class TwitterConnect extends AsyncTask<Void, Void, Void> {
+
+		private Boolean authSuccess = true;
+		private AccessToken accessToken = null;
+
+		@Override
+		protected Void doInBackground(Void... v) {
+
 			try {
-				
-				bundle = result.getResult();
-		        // The token is a named value in the bundle. The name of the value
-		        // is stored in the constant AccountManager.KEY_AUTHTOKEN.
-		        String token = bundle.getString(AccountManager.KEY_AUTHTOKEN);
+				accessToken = appState.mTwitter.getOAuthAccessToken(
+						appState.requestToken, appState.oauthVerifier);
 
-		        Log.d("DEBUG", "token is " + token);
-		        
-			} catch (OperationCanceledException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (AuthenticatorException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				SharedPreferences pref = getSharedPreferences(
+						Constants.PREFERENCE_NAME, MODE_PRIVATE);
+
+				SharedPreferences.Editor editor = pref.edit();
+				editor.putString("oauth_token", accessToken.getToken());
+				editor.putString("oauth_token_secret",
+						accessToken.getTokenSecret());
+				editor.commit();
+
+			} catch (TwitterException e) {
+
+				// We don't have access to the Twitter account, auth failed
+				authSuccess = false;
+
 			}
-	    
 
-	    }
-	}	
+			return null;
+
+		}
+
+		@Override
+		protected void onProgressUpdate(Void... v) {
+			// TODO show progress
+		}
+
+		@Override
+		protected void onPostExecute(Void v) {
+
+			if (authSuccess == true) {
+
+				// Move on to verification
+				Intent i = new Intent(AuthActivity.this,
+						MainActivity.class);
+				AuthActivity.this.startActivity(i);
+
+			} else {
+
+				Intent i = new Intent(AuthActivity.this, LoginActivity.class);
+				AuthActivity.this.startActivity(i);
+
+			}
+		}
+	}
 }

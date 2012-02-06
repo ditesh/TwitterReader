@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">TwitterReader</string>
-    <string name="no_tweets">No tweets</string>
+    <string name="app_name">Nuri</string>
+    <string name="menu_settings">Settings</string>
+    <string name="menu_new_tweet">New Tweet</string>
+    <string name="menu_reply">Reply</string>
+    <string name="menu_retweet">Retweet</string>
+    <string name="menu_rt">RT</string>
+    <string name="menu_favourite">Favourite</string>
+    <string name="send_tweet">Send Tweet</string>
+    <string name="cancel">Cancel</string>
     
 </resources>
